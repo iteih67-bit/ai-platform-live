@@ -1,0 +1,19 @@
+{
+  "name": "ai-live-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live AI/status platform - deployable Node service (zero-dependency) with dashboard, health API and durable operations ledger.",
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check lib/ledger.js && node --check lib/status.js",
+    "smoke": "node scripts/smoke.js"
+  },
+  "keywords": ["status", "dashboard", "health", "ledger", "ai-gateway"],
+  "license": "UNLICENSED"
+}
