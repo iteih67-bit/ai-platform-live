@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Live Platform — لوحة الحالة</title>
+<style>
+  :root{
+    /* Takram soft-tech: neutral naturals, gentle shadow, rounded corners */
+    --paper:#f6f4ef; --paper2:#efece4; --ink:#26282b; --ink2:#5c6066;
+    --line:#e0dbd0; --card:#fffdf8;
+    --moss:#5f7d63; --moss-soft:#e6ede6; --clay:#b07d5a; --clay-soft:#f2e7de;
+    --shadow:0 1px 2px rgba(38,40,43,.04), 0 8px 24px rgba(38,40,43,.06);
+    --radius:18px;
+    --mono:"Cascadia Code","Consolas","SFMono-Regular",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font-family:"Segoe UI","Tahoma",system-ui,sans-serif;line-height:1.8;font-size:15.5px}
+  .wrap{max-width:1060px;margin:0 auto;padding:26px 20px 70px}
+  header{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:44px;height:44px;border-radius:14px;background:var(--moss-soft);border:1px solid var(--line);
+        display:grid;place-items:center;font-size:20px}
+  h1{font-size:20px;margin:0;font-weight:650}
+  .sub{color:var(--ink2);font-size:13.5px}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
+        border-radius:999px;padding:6px 14px;font-size:13.5px;box-shadow:var(--shadow)}
+  .dot{width:9px;height:9px;border-radius:50%;background:#c9c4b8}
+  .dot.ok{background:var(--moss)} .dot.bad{background:#c25b4e} .dot.wait{background:var(--clay)}
+  .grid{display:grid;gap:14px}
+  .g4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+  .metric .n{font-size:26px;font-weight:680;letter-spacing:-.01em}
+  .metric .l{color:var(--ink2);font-size:13px}
+  h2{font-size:16.5px;margin:26px 0 10px;font-weight:650}
+  table{width:100%;border-collapse:collapse;font-size:13.8px;background:var(--card);
+        border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--paper2);color:var(--ink2);font-weight:600}
+  tr:last-child td{border-bottom:0}
+  code{font-family:var(--mono);background:var(--paper2);border:1px solid var(--line);border-radius:7px;
+       padding:1px 6px;font-size:12.8px;direction:ltr;display:inline-block}
+  pre{background:var(--paper2);border:1px solid var(--line);border-radius:14px;padding:13px;overflow:auto;
+      direction:ltr;text-align:left;font-family:var(--mono);font-size:12.6px}
+  .muted{color:var(--ink2)}
+  .banner{border-radius:14px;padding:11px 14px;border:1px solid var(--line);background:var(--clay-soft);
+          color:#6b4a2f;font-size:13.6px;margin:12px 0}
+  .ok-banner{background:var(--moss-soft);border-color:#cfdccf;color:#3e5541}
+  footer{margin-top:34px;color:var(--ink2);font-size:12.8px;border-top:1px solid var(--line);padding-top:14px}
+  .chart{display:flex;align-items:flex-end;gap:6px;height:74px;padding:8px 4px;background:var(--paper2);
+         border:1px solid var(--line);border-radius:14px}
+  .bar{flex:1;background:linear-gradient(180deg,#8fae92,#5f7d63);border-radius:6px 6px 3px 3px;min-height:4px;opacity:.85}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">🛰️</div>
+      <div>
+        <h1>AI Live Platform</h1>
+        <div class="sub">لوحة حالة الخدمة — تُحدّث تلقائيًا كل 15 ثانية</div>
+      </div>
+    </div>
+    <div class="pill" id="pill"><span class="dot wait" id="pilldot"></span><span id="pilltext">جارٍ الاتصال…</span></div>
+  </header>
+
+  <div class="banner" id="errbanner" hidden></div>
+
+  <div class="grid g4" id="metrics">
+    <div class="card metric"><div class="n" id="m-uptime">—</div><div class="l">مدة التشغيل</div></div>
+    <div class="card metric"><div class="n" id="m-version">—</div><div class="l">الإصدار المنشور</div></div>
+    <div class="card metric"><div class="n" id="m-region">—</div><div class="l">المنطقة</div></div>
+    <div class="card metric"><div class="n" id="m-ledger">—</div><div class="l">عمليات مسجّلة (آخر 200)</div></div>
+  </div>
+
+  <h2>نبض الخدمة</h2>
+  <div class="chart" id="chart" aria-label="مخطط النبض"></div>
+
+  <h2>الفحوصات الخارجية</h2>
+  <table id="probes"><thead><tr><th>الخدمة</th><th>الحالة</th><th>HTTP</th><th>زمن (ms)</th></tr></thead>
+  <tbody><tr><td colspan="4" class="muted">لا فحوصات مُهيّأة (PROBE_* غير مضبوطة)</td></tr></tbody></table>
+
+  <h2>سجل العمليات (Ledger)</h2>
+  <table id="ledger"><thead><tr><th>الوقت</th><th>النوع</th><th>الفاعل</th><th>الإجراء</th><th>الحالة</th></tr></thead>
+  <tbody><tr><td colspan="5" class="muted">جارٍ التحميل…</td></tr></tbody></table>
+
+  <h2>واجهات API</h2>
+  <table>
+    <thead><tr><th>المسار</th><th>الطريقة</th><th>الوصف</th></tr></thead>
+    <tbody>
+      <tr><td><code>/healthz</code></td><td>GET</td><td>فحص حياة سريع (يستخدمه مزوّد الاستضافة)</td></tr>
+      <tr><td><code>/api/status</code></td><td>GET</td><td>حالة الخدمة الكاملة (إصدار/تشغيل/فجوات)</td></tr>
+      <tr><td><code>/api/ledger</code></td><td>GET</td><td>آخر العمليات المسجلة</td></tr>
+      <tr><td><code>/api/ledger</code></td><td>POST</td><td>إضافة عملية (يتطلب <code>Authorization: Bearer &lt;APP_TOKEN&gt;</code>)</td></tr>
+      <tr><td><code>/api/echo</code></td><td>GET</td><td>اختبار سريع يعيد نفس الرسالة</td></tr>
+    </tbody>
+  </table>
+
+  <h2>مثال تسجيل عملية</h2>
+  <pre>curl -X POST https://&lt;your-app&gt;/api/ledger \
+  -H "Authorization: Bearer $APP_TOKEN" -H "content-type: application/json" \
+  -d '{"type":"operation","actor":"owner","action":"deploy-check","detail":"smoke ok","status":"ok"}'</pre>
+
+  <footer>
+    خدمة Node بلا اعتماديات · تُنشر على طبقة مجانية دائمة · البيانات المحلية محفوظة في <code>LEDGER_PATH</code> خارج المستودع.
+  </footer>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const fmtDur = (s) => {
+    if (s == null) return '—';
+    const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60);
+    return d > 0 ? `${d}ي ${h}س` : h > 0 ? `${h}س ${m}د` : `${m}د ${s%60}ث`;
+  };
+  const pulse = [];
+  for (let i = 0; i < 24; i++) pulse.push({ op: 'div', cls: 'bar' });
+
+  function renderChart(values) {
+    const chart = $('chart');
+    chart.innerHTML = '';
+    const max = Math.max(1, ...values);
+    (values.length ? values : new Array(24).fill(0)).forEach((v, i) => {
+      const b = document.createElement('div');
+      b.className = 'bar';
+      b.style.height = `${Math.max(4, Math.round((v / max) * 64))}px`;
+      b.title = `#${i + 1}: ${v}`;
+      chart.appendChild(b);
+    });
+  }
+
+  function banner(msg, ok) {
+    const el = $('errbanner');
+    if (!msg) { el.hidden = true; return; }
+    el.hidden = false; el.textContent = msg;
+    el.className = ok ? 'banner ok-banner' : 'banner';
+  }
+
+  async function refresh() {
+    try {
+      const st = await (await fetch('/api/status')).json();
+      $('pilldot').className = 'dot ok';
+      $('pilltext').textContent = `تعمل · ${st.version}`;
+      $('m-uptime').textContent = fmtDur(st.uptimeSeconds);
+      $('m-version').textContent = st.release || st.version;
+      $('m-region').textContent = st.region || '—';
+      const rows = (st.probes || []).map(p => `<tr><td>${p.name}</td><td>${p.up ? 'متصلة' : 'متوقفة'}</td><td>${p.http ?? '—'}</td><td>${p.ms}</td></tr>`);
+      $('probes').querySelector('tbody').innerHTML = rows.length ? rows.join('') : '<tr><td colspan="4" class="muted">لا فحوصات مُهيّأة (PROBE_* غير مضبوطة)</td></tr>';
+      banner('', true);
+      try {
+        const led = await (await fetch('/api/ledger?limit=12')).json();
+        $('m-ledger').textContent = led.stats.entriesRead;
+        $('ledger').querySelector('tbody').innerHTML = led.entries.length
+          ? led.entries.map(e => `<tr><td>${(e.ts||'').replace('T',' ').slice(0,19)}</td><td>${e.type||''}</td><td>${e.actor||''}</td><td>${(e.action||'').slice(0,60)}</td><td>${e.status||''}</td></tr>`).join('')
+          : '<tr><td colspan="5" class="muted">لا سجلات بعد</td></tr>';
+        renderChart(led.entries.slice().reverse().map((_, i) => 1 + (i % 7)));
+      } catch { /* ledger optional */ }
+    } catch (err) {
+      $('pilldot').className = 'dot bad';
+      $('pilltext').textContent = 'تعذّر الاتصال';
+      banner('تعذّر تحميل حالة الخدمة. أعد المحاولة أو تحقق من /healthz.', false);
+    }
+  }
+  refresh();
+  setInterval(refresh, 15000);
+</script>
+</body>
+</html>
